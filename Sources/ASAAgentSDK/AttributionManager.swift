@@ -33,12 +33,11 @@ final class AttributionManager {
 
             let token = self.getAdServicesToken()
 
-            guard let token = token else {
-                self.logger.log("No AdServices token available (organic install or error).")
-                return
+            if let token = token {
+                self.logger.log("AdServices token collected (\(token.count) chars). Sending to backend...")
+            } else {
+                self.logger.log("No AdServices token (organic/TestFlight install). Reporting to backend...")
             }
-
-            self.logger.log("AdServices token collected (\(token.count) chars). Sending to backend...")
 
             let payload = AttributionPayload(
                 deviceId: deviceId,

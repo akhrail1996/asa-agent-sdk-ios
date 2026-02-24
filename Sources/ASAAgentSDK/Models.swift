@@ -21,7 +21,7 @@ public enum RevenueEventType: String, Sendable {
 /// Attribution payload sent to the backend.
 struct AttributionPayload: Encodable {
     let deviceId: String
-    let attributionToken: String
+    let attributionToken: String?
     let bundleId: String?
     let appVersion: String?
     let osVersion: String
