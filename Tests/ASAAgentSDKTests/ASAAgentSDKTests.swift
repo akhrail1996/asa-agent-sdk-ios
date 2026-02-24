@@ -50,7 +50,7 @@ final class ASAAgentSDKTests: XCTestCase {
 
     func testBaseURLDefault() {
         let config = ASAAgent.Configuration(apiKey: "ask_test", appId: "111")
-        XCTAssertEqual(config.baseURL.absoluteString, "https://asa-agent-web.vercel.app")
+        XCTAssertEqual(config.baseURL.absoluteString, "https://asaagent.xyz")
     }
 
     func testBaseURLOverride() {

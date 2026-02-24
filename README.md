@@ -82,7 +82,7 @@ ASAAgent.trackRevenue(
 
 ### 3. Get Your API Key
 
-1. Go to your [ASA Agent dashboard](https://asa-agent-web.vercel.app/dashboard/settings)
+1. Go to your [ASA Agent dashboard](https://asaagent.xyz/dashboard/settings)
 2. Navigate to **Settings → SDK Integration**
 3. Click **Generate API Key** for your app
 4. Copy the key (starts with `ask_`)

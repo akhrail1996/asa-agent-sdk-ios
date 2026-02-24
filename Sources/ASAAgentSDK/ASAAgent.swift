@@ -34,7 +34,7 @@ public final class ASAAgent {
         public init(
             apiKey: String,
             appId: String,
-            baseURL: URL = URL(string: "https://asa-agent-web.vercel.app")!,
+            baseURL: URL = URL(string: "https://asaagent.xyz")!,
             loggingEnabled: Bool = false
         ) {
             self.apiKey = apiKey
