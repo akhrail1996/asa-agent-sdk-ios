@@ -101,7 +101,8 @@ final class ASAAgentSDKTests: XCTestCase {
             bundleId: "com.test.app",
             appVersion: "1.0.0",
             osVersion: "17.4",
-            sdkVersion: "0.1.0"
+            sdkVersion: "0.2.0",
+            environment: .debug
         )
 
         let encoder = JSONEncoder()
@@ -113,13 +114,14 @@ final class ASAAgentSDKTests: XCTestCase {
         XCTAssertEqual(json["attribution_token"] as? String, "fake-token-base64")
         XCTAssertEqual(json["bundle_id"] as? String, "com.test.app")
         XCTAssertEqual(json["app_version"] as? String, "1.0.0")
-        XCTAssertEqual(json["sdk_version"] as? String, "0.1.0")
+        XCTAssertEqual(json["sdk_version"] as? String, "0.2.0")
+        XCTAssertEqual(json["environment"] as? String, "debug")
     }
 
     // MARK: - SDK Constants
 
     func testSDKVersion() {
-        XCTAssertEqual(SDKConstants.version, "0.1.0")
+        XCTAssertEqual(SDKConstants.version, "0.2.0")
     }
 
     // MARK: - Logger

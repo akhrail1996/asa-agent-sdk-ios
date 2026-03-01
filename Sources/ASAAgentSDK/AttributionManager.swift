@@ -32,11 +32,12 @@ final class AttributionManager {
             guard let self = self else { return }
 
             let token = self.getAdServicesToken()
+            let environment = AppEnvironment.current
 
             if let token = token {
-                self.logger.log("AdServices token collected (\(token.count) chars). Sending to backend...")
+                self.logger.log("AdServices token collected (\(token.count) chars), environment: \(environment.rawValue). Sending to backend...")
             } else {
-                self.logger.log("No AdServices token (organic/TestFlight install). Reporting to backend...")
+                self.logger.log("No AdServices token (organic/TestFlight install), environment: \(environment.rawValue). Reporting to backend...")
             }
 
             let payload = AttributionPayload(
@@ -45,7 +46,8 @@ final class AttributionManager {
                 bundleId: Bundle.main.bundleIdentifier,
                 appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
                 osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
-                sdkVersion: SDKConstants.version
+                sdkVersion: SDKConstants.version,
+                environment: environment
             )
 
             self.network.sendAttribution(payload) { [weak self] result in
