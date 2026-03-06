@@ -1,4 +1,5 @@
 import Foundation
+import AdServices
 
 /// Manages AdServices token collection and submission to ASA Agent backend.
 final class AttributionManager {
@@ -21,12 +22,6 @@ final class AttributionManager {
             return
         }
 
-        // AdServices is only available on iOS 14.3+
-        guard #available(iOS 14.3, *) else {
-            logger.log("iOS 14.3+ required for AdServices. Skipping attribution.")
-            return
-        }
-
         // Collect token on a background queue (may involve system call)
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
@@ -37,7 +32,7 @@ final class AttributionManager {
             if let token = token {
                 self.logger.log("AdServices token collected (\(token.count) chars), environment: \(environment.rawValue). Sending to backend...")
             } else {
-                self.logger.log("No AdServices token (organic/TestFlight install), environment: \(environment.rawValue). Reporting to backend...")
+                self.logger.log("No AdServices token (organic install or AdServices unavailable), environment: \(environment.rawValue). Reporting to backend...")
             }
 
             let payload = AttributionPayload(
@@ -64,52 +59,17 @@ final class AttributionManager {
 
     /// Collect the AdServices attribution token.
     /// Returns `nil` for organic installs or if AdServices is unavailable.
-    @available(iOS 14.3, *)
     private func getAdServicesToken() -> String? {
-        // Dynamic lookup to avoid hard link — allows SDK to compile even without AdServices
-        guard let adServicesClass = NSClassFromString("AAAttribution") else {
-            logger.log("AAAttribution class not found. Ensure AdServices.framework is linked.")
-            return nil
-        }
-
-        let selector = NSSelectorFromString("attributionTokenWithError:")
-
-        guard adServicesClass.responds(to: selector) else {
-            logger.log("attributionTokenWithError: not available.")
-            return nil
-        }
-
-        // Use the direct import approach
-        return Self.fetchToken()
-    }
-
-    /// Fetch token using AdServices framework.
-    @available(iOS 14.3, *)
-    private static func fetchToken() -> String? {
-        // We use dynamic invocation to keep the SDK compilable without AdServices linked
-        let handle = dlopen("/System/Library/Frameworks/AdServices.framework/AdServices", RTLD_LAZY)
-        guard handle != nil else { return nil }
-        defer { dlclose(handle) }
-
-        typealias AttributionTokenFunc = @convention(c) (AnyClass, Selector, UnsafeMutablePointer<NSError?>) -> NSString?
-
-        guard let cls = NSClassFromString("AAAttribution") else { return nil }
-        let sel = NSSelectorFromString("attributionTokenWithError:")
-        guard let method = class_getClassMethod(cls, sel) else { return nil }
-        let imp = method_getImplementation(method)
-
-        let function = unsafeBitCast(imp, to: AttributionTokenFunc.self)
-        var error: NSError?
-        let token = function(cls, sel, &error)
-
-        if let error = error {
+        do {
+            let token = try AAAttribution.attributionToken()
+            return token
+        } catch {
             // Error code 1 = no attribution (organic install), not a real error
-            if error.code != 1 {
-                NSLog("[ASAAgent] AdServices error: \(error)")
+            let nsError = error as NSError
+            if nsError.code != 1 {
+                logger.log("AdServices error: \(error.localizedDescription)")
             }
             return nil
         }
-
-        return token as String?
     }
 }

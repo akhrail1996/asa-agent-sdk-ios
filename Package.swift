@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
     name: "ASAAgentSDK",
     platforms: [
-        .iOS(.v14)
+        .iOS(.v15)
     ],
     products: [
         .library(
@@ -16,7 +16,10 @@ let package = Package(
     targets: [
         .target(
             name: "ASAAgentSDK",
-            path: "Sources/ASAAgentSDK"
+            path: "Sources/ASAAgentSDK",
+            linkerSettings: [
+                .linkedFramework("AdServices"),
+            ]
         ),
         .testTarget(
             name: "ASAAgentSDKTests",
