@@ -31,6 +31,13 @@ public final class StoreKitObserver {
     private func handleVerifiedTransaction(_ result: VerificationResult<StoreKit.Transaction>) async {
         guard case .verified(let transaction) = result else { return }
 
+        // Skip sandbox transactions (iOS 16+) — they aren't real revenue
+        if #available(iOS 16.0, *) {
+            if transaction.environment == .sandbox || transaction.environment == .xcode {
+                return
+            }
+        }
+
         let type: RevenueEventType
         let revenue: Double
 
