@@ -13,7 +13,7 @@ final class ASAAgentSDKTests: XCTestCase {
             loggingEnabled: false
         )
         // Accessing .shared should not crash after configure()
-        let _ = ASAAgent.shared
+        _ = ASAAgent.shared
     }
 
     func testConfigureSetsApiKeyAndAppId() {
@@ -82,7 +82,7 @@ final class ASAAgentSDKTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         let data = try encoder.encode(event)
-        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
 
         XCTAssertEqual(json["device_id"] as? String, "test-device-id")
         XCTAssertEqual(json["event_type"] as? String, "purchase")
@@ -108,7 +108,7 @@ final class ASAAgentSDKTests: XCTestCase {
         let encoder = JSONEncoder()
         encoder.keyEncodingStrategy = .convertToSnakeCase
         let data = try encoder.encode(payload)
-        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
 
         XCTAssertEqual(json["device_id"] as? String, "dev-123")
         XCTAssertEqual(json["attribution_token"] as? String, "fake-token-base64")
@@ -121,7 +121,7 @@ final class ASAAgentSDKTests: XCTestCase {
     // MARK: - SDK Constants
 
     func testSDKVersion() {
-        XCTAssertEqual(SDKConstants.version, "0.3.0")
+        XCTAssertEqual(SDKConstants.version, "0.4.0")
     }
 
     // MARK: - Logger

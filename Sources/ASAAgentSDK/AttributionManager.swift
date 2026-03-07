@@ -32,7 +32,8 @@ final class AttributionManager {
             if let token = token {
                 self.logger.log("AdServices token collected (\(token.count) chars), environment: \(environment.rawValue). Sending to backend...")
             } else {
-                self.logger.log("No AdServices token (organic install or AdServices unavailable), environment: \(environment.rawValue). Reporting to backend...")
+                self.logger.log("No AdServices token (organic install or AdServices unavailable), " +
+                    "environment: \(environment.rawValue). Reporting to backend...")
             }
 
             let payload = AttributionPayload(

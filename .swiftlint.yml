@@ -1,0 +1,9 @@
+excluded:
+  - .build
+
+disabled_rules:
+  - trailing_comma
+
+line_length:
+  warning: 150
+  error: 250
