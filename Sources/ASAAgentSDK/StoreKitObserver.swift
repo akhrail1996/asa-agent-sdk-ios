@@ -89,8 +89,8 @@ public final class StoreKitObserver {
 
         switch transaction.productType {
         case .autoRenewable:
-            if revenue == 0 {
-                return (.trial, 0)
+            if isIntroductoryOffer(transaction) {
+                return (.trial, revenue) // free trial (revenue=0) or discounted intro
             } else if transaction.isUpgraded {
                 return (.subscription, revenue)
             } else {
@@ -101,6 +101,16 @@ public final class StoreKitObserver {
         default:
             return nil
         }
+    }
+
+    /// Check if a transaction is an introductory offer (free trial / intro pricing).
+    private func isIntroductoryOffer(_ transaction: StoreKit.Transaction) -> Bool {
+        if #available(iOS 15.4, *) {
+            return transaction.offerType == .introductory
+        }
+        // Fallback for iOS 15.0–15.3: zero-price auto-renewable = trial
+        let price = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
+        return price == 0
     }
 
     /// Resolve the transaction currency code.
