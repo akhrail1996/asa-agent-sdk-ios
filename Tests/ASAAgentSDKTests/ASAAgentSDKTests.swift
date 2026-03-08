@@ -121,7 +121,7 @@ final class ASAAgentSDKTests: XCTestCase {
     // MARK: - SDK Constants
 
     func testSDKVersion() {
-        XCTAssertEqual(SDKConstants.version, "0.4.0")
+        XCTAssertEqual(SDKConstants.version, "0.4.1")
     }
 
     // MARK: - Logger
