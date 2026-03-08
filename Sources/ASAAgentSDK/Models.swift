@@ -66,7 +66,7 @@ struct RevenueEvent: Encodable {
 
 /// SDK constants.
 enum SDKConstants {
-    static let version = "0.4.0"
+    static let version = "0.4.1"
     static let keychainService = "com.asaagent.sdk"
     static let keychainDeviceIdKey = "device_id"
     static let attributionSentKey = "com.asaagent.sdk.attribution_sent"

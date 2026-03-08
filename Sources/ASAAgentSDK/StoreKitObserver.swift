@@ -34,6 +34,7 @@ public final class StoreKitObserver {
         // Skip sandbox transactions (iOS 16+) — they aren't real revenue
         if #available(iOS 16.0, *) {
             if transaction.environment == .sandbox || transaction.environment == .xcode {
+                await transaction.finish()
                 return
             }
         }
@@ -43,8 +44,15 @@ public final class StoreKitObserver {
 
         switch transaction.productType {
         case .autoRenewable:
-            type = transaction.isUpgraded ? .subscription : .renewal
             revenue = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
+            if revenue == 0 {
+                // Free trial — auto-renewable with zero price
+                type = .trial
+            } else if transaction.isUpgraded {
+                type = .subscription
+            } else {
+                type = .renewal
+            }
         case .consumable, .nonConsumable:
             type = .purchase
             revenue = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
@@ -52,10 +60,15 @@ public final class StoreKitObserver {
             type = .purchase
             revenue = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
         default:
+            await transaction.finish()
             return
         }
 
-        guard revenue > 0 else { return }
+        // Skip zero-revenue events that aren't trials
+        guard revenue > 0 || type == .trial else {
+            await transaction.finish()
+            return
+        }
 
         let currency: String
         if #available(iOS 16.0, *) {
