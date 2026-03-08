@@ -31,51 +31,17 @@ public final class StoreKitObserver {
     private func handleVerifiedTransaction(_ result: VerificationResult<StoreKit.Transaction>) async {
         guard case .verified(let transaction) = result else { return }
 
-        // Skip sandbox transactions (iOS 16+) — they aren't real revenue
-        if #available(iOS 16.0, *) {
-            if transaction.environment == .sandbox || transaction.environment == .xcode {
-                await transaction.finish()
-                return
-            }
-        }
-
-        let type: RevenueEventType
-        let revenue: Double
-
-        switch transaction.productType {
-        case .autoRenewable:
-            revenue = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
-            if revenue == 0 {
-                // Free trial — auto-renewable with zero price
-                type = .trial
-            } else if transaction.isUpgraded {
-                type = .subscription
-            } else {
-                type = .renewal
-            }
-        case .consumable, .nonConsumable:
-            type = .purchase
-            revenue = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
-        case .nonRenewable:
-            type = .purchase
-            revenue = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
-        default:
+        if isSandbox(transaction) {
             await transaction.finish()
             return
         }
 
-        // Skip zero-revenue events that aren't trials
-        guard revenue > 0 || type == .trial else {
+        guard let (type, revenue) = classifyTransaction(transaction) else {
             await transaction.finish()
             return
         }
 
-        let currency: String
-        if #available(iOS 16.0, *) {
-            currency = transaction.currency?.identifier ?? "USD"
-        } else {
-            currency = "USD"
-        }
+        let currency = resolveCurrency(transaction)
 
         ASAAgent.trackRevenue(
             productId: transaction.productID,
@@ -85,8 +51,43 @@ public final class StoreKitObserver {
             transactionId: String(transaction.id)
         )
 
-        // Finish the transaction
         await transaction.finish()
+    }
+
+    /// Check if transaction is from a sandbox/Xcode environment.
+    private func isSandbox(_ transaction: StoreKit.Transaction) -> Bool {
+        if #available(iOS 16.0, *) {
+            return transaction.environment == .sandbox || transaction.environment == .xcode
+        }
+        return false
+    }
+
+    /// Classify transaction into event type and revenue. Returns nil for unsupported types.
+    private func classifyTransaction(_ transaction: StoreKit.Transaction) -> (RevenueEventType, Double)? {
+        let revenue = NSDecimalNumber(decimal: transaction.price ?? 0).doubleValue
+
+        switch transaction.productType {
+        case .autoRenewable:
+            if revenue == 0 {
+                return (.trial, 0)
+            } else if transaction.isUpgraded {
+                return (.subscription, revenue)
+            } else {
+                return (.renewal, revenue)
+            }
+        case .consumable, .nonConsumable, .nonRenewable:
+            return revenue > 0 ? (.purchase, revenue) : nil
+        default:
+            return nil
+        }
+    }
+
+    /// Resolve the transaction currency code.
+    private func resolveCurrency(_ transaction: StoreKit.Transaction) -> String {
+        if #available(iOS 16.0, *) {
+            return transaction.currency?.identifier ?? "USD"
+        }
+        return "USD"
     }
 }
 
