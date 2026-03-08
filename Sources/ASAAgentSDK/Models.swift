@@ -70,4 +70,5 @@ enum SDKConstants {
     static let keychainService = "com.asaagent.sdk"
     static let keychainDeviceIdKey = "device_id"
     static let attributionSentKey = "com.asaagent.sdk.attribution_sent"
+    static let historicalSyncKey = "com.asaagent.sdk.historical_sync_v1"
 }

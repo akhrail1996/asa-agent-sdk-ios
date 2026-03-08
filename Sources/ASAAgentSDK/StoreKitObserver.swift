@@ -28,6 +28,27 @@ public final class StoreKitObserver {
         updateTask = nil
     }
 
+    /// One-time scan of all historical transactions to backfill any
+    /// that were missed (e.g. trials before SDK tracked them).
+    /// Server-side dedup by transaction_id prevents duplicates.
+    func syncHistoricalTransactions() {
+        Task(priority: .background) {
+            for await result in Transaction.all {
+                guard case .verified(let txn) = result else { continue }
+                if isSandbox(txn) { continue }
+                guard let (type, revenue) = classifyTransaction(txn) else { continue }
+                let currency = resolveCurrency(txn)
+                ASAAgent.trackRevenue(
+                    productId: txn.productID,
+                    revenue: revenue,
+                    currency: currency,
+                    type: type,
+                    transactionId: String(txn.id)
+                )
+            }
+        }
+    }
+
     private func handleVerifiedTransaction(_ result: VerificationResult<StoreKit.Transaction>) async {
         guard case .verified(let transaction) = result else { return }
 
@@ -106,6 +127,15 @@ extension ASAAgent {
         observer.startObserving()
         _storeKitObserver = observer
         shared.logger.log("Auto-tracking enabled (StoreKit 2).")
+
+        // One-time backfill: scan historical transactions to catch
+        // trials/renewals missed by earlier SDK versions.
+        let syncKey = SDKConstants.historicalSyncKey
+        if !UserDefaults.standard.bool(forKey: syncKey) {
+            observer.syncHistoricalTransactions()
+            UserDefaults.standard.set(true, forKey: syncKey)
+            shared.logger.log("Historical transaction sync started.")
+        }
     }
 
     /// Disable automatic StoreKit 2 revenue tracking.
