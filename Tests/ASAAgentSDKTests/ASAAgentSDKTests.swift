@@ -121,7 +121,48 @@ final class ASAAgentSDKTests: XCTestCase {
     // MARK: - SDK Constants
 
     func testSDKVersion() {
-        XCTAssertEqual(SDKConstants.version, "0.4.1")
+        XCTAssertEqual(SDKConstants.version, "0.5.0")
+    }
+
+    func testRevenueEventWithHistoricalTimestamp() throws {
+        let pastDate = Date(timeIntervalSince1970: 1700000000) // 2023-11-14
+        let event = RevenueEvent(
+            deviceId: "test-device",
+            eventType: "renewal",
+            productId: "com.test.monthly",
+            revenue: 9.99,
+            currency: "EUR",
+            transactionId: "txn_456",
+            timestamp: pastDate,
+            isHistorical: true
+        )
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let data = try encoder.encode(event)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(json["is_historical"] as? Bool, true)
+        let timestamp = try XCTUnwrap(json["timestamp"] as? String)
+        XCTAssertTrue(timestamp.contains("2023-11-14"), "Timestamp should reflect the provided date, not Date()")
+    }
+
+    func testRevenueEventDefaultsToNonHistorical() throws {
+        let event = RevenueEvent(
+            deviceId: "test-device",
+            eventType: "purchase",
+            productId: "com.test.product",
+            revenue: 4.99,
+            currency: "USD",
+            transactionId: nil
+        )
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let data = try encoder.encode(event)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(json["is_historical"] as? Bool, false)
     }
 
     // MARK: - Logger

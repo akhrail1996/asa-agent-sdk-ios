@@ -60,13 +60,34 @@ struct RevenueEvent: Encodable {
     let currency: String
     let transactionId: String?
     let sdkVersion: String = SDKConstants.version
-    let timestamp: String = ISO8601DateFormatter().string(from: Date())
+    let timestamp: String
     let environment: AppEnvironment = AppEnvironment.current
+    let isHistorical: Bool
+
+    init(
+        deviceId: String,
+        eventType: String,
+        productId: String,
+        revenue: Double,
+        currency: String,
+        transactionId: String?,
+        timestamp: Date = Date(),
+        isHistorical: Bool = false
+    ) {
+        self.deviceId = deviceId
+        self.eventType = eventType
+        self.productId = productId
+        self.revenue = revenue
+        self.currency = currency
+        self.transactionId = transactionId
+        self.timestamp = ISO8601DateFormatter().string(from: timestamp)
+        self.isHistorical = isHistorical
+    }
 }
 
 /// SDK constants.
 enum SDKConstants {
-    static let version = "0.4.1"
+    static let version = "0.5.0"
     static let keychainService = "com.asaagent.sdk"
     static let keychainDeviceIdKey = "device_id"
     static let attributionSentKey = "com.asaagent.sdk.attribution_sent"

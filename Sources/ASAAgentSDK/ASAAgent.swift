@@ -103,19 +103,25 @@ public final class ASAAgent {
     ///   - currency: ISO 4217 currency code (e.g. "USD", "EUR").
     ///   - type: The type of revenue event.
     ///   - transactionId: The StoreKit transaction ID (for deduplication).
+    ///   - timestamp: When the transaction originally occurred. Defaults to now.
+    ///   - isHistorical: Whether this is a backfilled historical transaction.
     public static func trackRevenue(
         productId: String,
         revenue: Double,
         currency: String,
         type: RevenueEventType = .purchase,
-        transactionId: String? = nil
+        transactionId: String? = nil,
+        timestamp: Date = Date(),
+        isHistorical: Bool = false
     ) {
         shared.sendRevenueEvent(
             productId: productId,
             revenue: revenue,
             currency: currency,
             type: type,
-            transactionId: transactionId
+            transactionId: transactionId,
+            timestamp: timestamp,
+            isHistorical: isHistorical
         )
     }
 
@@ -167,7 +173,9 @@ public final class ASAAgent {
         revenue: Double,
         currency: String,
         type: RevenueEventType,
-        transactionId: String?
+        transactionId: String?,
+        timestamp: Date = Date(),
+        isHistorical: Bool = false
     ) {
         let event = RevenueEvent(
             deviceId: storage.deviceId,
@@ -175,7 +183,9 @@ public final class ASAAgent {
             productId: productId,
             revenue: revenue,
             currency: currency,
-            transactionId: transactionId
+            transactionId: transactionId,
+            timestamp: timestamp,
+            isHistorical: isHistorical
         )
 
         network.sendEvent(event) { [logger] result in

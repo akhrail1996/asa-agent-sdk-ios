@@ -43,7 +43,9 @@ public final class StoreKitObserver {
                     revenue: revenue,
                     currency: currency,
                     type: type,
-                    transactionId: String(txn.id)
+                    transactionId: String(txn.id),
+                    timestamp: txn.purchaseDate,
+                    isHistorical: true
                 )
             }
         }
@@ -69,7 +71,8 @@ public final class StoreKitObserver {
             revenue: revenue,
             currency: currency,
             type: type,
-            transactionId: String(transaction.id)
+            transactionId: String(transaction.id),
+            timestamp: transaction.purchaseDate
         )
 
         await transaction.finish()
