@@ -36,6 +36,8 @@ final class AttributionManager {
                     "environment: \(environment.rawValue). Reporting to backend...")
             }
 
+            let installDate = Self.detectInstallDate()
+
             let payload = AttributionPayload(
                 deviceId: deviceId,
                 attributionToken: token,
@@ -43,7 +45,8 @@ final class AttributionManager {
                 appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
                 osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
                 sdkVersion: SDKConstants.version,
-                environment: environment
+                environment: environment,
+                installDate: installDate
             )
 
             self.network.sendAttribution(payload) { [weak self] result in
@@ -55,6 +58,23 @@ final class AttributionManager {
                     self?.logger.log("Attribution send failed: \(error.localizedDescription). Will retry next launch.")
                 }
             }
+        }
+    }
+
+    /// Detect when the app was first installed by checking the Documents directory creation date.
+    /// This date persists across app updates but resets on reinstall — which is correct,
+    /// since a reinstall IS a new install from the SDK's perspective.
+    /// Returns an ISO 8601 string, or nil if the date can't be determined.
+    static func detectInstallDate() -> String? {
+        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        do {
+            let attrs = try FileManager.default.attributesOfItem(atPath: docsURL.path)
+            guard let creationDate = attrs[.creationDate] as? Date else { return nil }
+            return ISO8601DateFormatter().string(from: creationDate)
+        } catch {
+            return nil
         }
     }
 

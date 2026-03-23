@@ -49,6 +49,10 @@ struct AttributionPayload: Encodable {
     let osVersion: String
     let sdkVersion: String
     let environment: AppEnvironment
+    /// ISO 8601 timestamp of when the app was first installed on this device.
+    /// Server compares this to the attribution timestamp to distinguish
+    /// new installs from existing users who updated to the SDK version.
+    let installDate: String?
 }
 
 /// Revenue event payload sent to the backend.
@@ -87,7 +91,7 @@ struct RevenueEvent: Encodable {
 
 /// SDK constants.
 enum SDKConstants {
-    static let version = "0.5.0"
+    static let version = "0.6.0"
     static let keychainService = "com.asaagent.sdk"
     static let keychainDeviceIdKey = "device_id"
     static let attributionSentKey = "com.asaagent.sdk.attribution_sent"

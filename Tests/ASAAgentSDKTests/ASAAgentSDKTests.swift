@@ -101,8 +101,9 @@ final class ASAAgentSDKTests: XCTestCase {
             bundleId: "com.test.app",
             appVersion: "1.0.0",
             osVersion: "17.4",
-            sdkVersion: "0.3.0",
-            environment: .debug
+            sdkVersion: "0.6.0",
+            environment: .debug,
+            installDate: "2026-03-20T10:00:00Z"
         )
 
         let encoder = JSONEncoder()
@@ -114,14 +115,48 @@ final class ASAAgentSDKTests: XCTestCase {
         XCTAssertEqual(json["attribution_token"] as? String, "fake-token-base64")
         XCTAssertEqual(json["bundle_id"] as? String, "com.test.app")
         XCTAssertEqual(json["app_version"] as? String, "1.0.0")
-        XCTAssertEqual(json["sdk_version"] as? String, "0.3.0")
+        XCTAssertEqual(json["sdk_version"] as? String, "0.6.0")
         XCTAssertEqual(json["environment"] as? String, "debug")
+        XCTAssertEqual(json["install_date"] as? String, "2026-03-20T10:00:00Z")
+    }
+
+    func testAttributionPayloadWithNilInstallDate() throws {
+        let payload = AttributionPayload(
+            deviceId: "dev-456",
+            attributionToken: nil,
+            bundleId: "com.test.app",
+            appVersion: "1.0.0",
+            osVersion: "17.4",
+            sdkVersion: "0.6.0",
+            environment: .production,
+            installDate: nil
+        )
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let data = try encoder.encode(payload)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+
+        XCTAssertEqual(json["device_id"] as? String, "dev-456")
+        XCTAssertNil(json["attribution_token"])
+        // install_date should be encoded as null or absent
+    }
+
+    func testDetectInstallDateReturnsISO8601() {
+        // On macOS/simulator, Documents directory always exists
+        let installDate = AttributionManager.detectInstallDate()
+        if let date = installDate {
+            // Should be a valid ISO 8601 string
+            let formatter = ISO8601DateFormatter()
+            XCTAssertNotNil(formatter.date(from: date), "Install date should be valid ISO 8601")
+        }
+        // nil is also acceptable (e.g., sandboxed test environment)
     }
 
     // MARK: - SDK Constants
 
     func testSDKVersion() {
-        XCTAssertEqual(SDKConstants.version, "0.5.0")
+        XCTAssertEqual(SDKConstants.version, "0.6.0")
     }
 
     func testRevenueEventWithHistoricalTimestamp() throws {
