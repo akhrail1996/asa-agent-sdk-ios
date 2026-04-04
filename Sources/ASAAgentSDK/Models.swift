@@ -63,6 +63,7 @@ struct RevenueEvent: Encodable {
     let revenue: Double
     let currency: String
     let transactionId: String?
+    let originalTransactionId: String?
     let sdkVersion: String = SDKConstants.version
     let timestamp: String
     let environment: AppEnvironment = AppEnvironment.current
@@ -75,6 +76,7 @@ struct RevenueEvent: Encodable {
         revenue: Double,
         currency: String,
         transactionId: String?,
+        originalTransactionId: String? = nil,
         timestamp: Date = Date(),
         isHistorical: Bool = false
     ) {
@@ -84,6 +86,7 @@ struct RevenueEvent: Encodable {
         self.revenue = revenue
         self.currency = currency
         self.transactionId = transactionId
+        self.originalTransactionId = originalTransactionId
         self.timestamp = ISO8601DateFormatter().string(from: timestamp)
         self.isHistorical = isHistorical
     }

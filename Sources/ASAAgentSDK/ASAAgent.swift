@@ -111,6 +111,7 @@ public final class ASAAgent {
         currency: String,
         type: RevenueEventType = .purchase,
         transactionId: String? = nil,
+        originalTransactionId: String? = nil,
         timestamp: Date = Date(),
         isHistorical: Bool = false
     ) {
@@ -120,6 +121,7 @@ public final class ASAAgent {
             currency: currency,
             type: type,
             transactionId: transactionId,
+            originalTransactionId: originalTransactionId,
             timestamp: timestamp,
             isHistorical: isHistorical
         )
@@ -174,6 +176,7 @@ public final class ASAAgent {
         currency: String,
         type: RevenueEventType,
         transactionId: String?,
+        originalTransactionId: String? = nil,
         timestamp: Date = Date(),
         isHistorical: Bool = false
     ) {
@@ -184,6 +187,7 @@ public final class ASAAgent {
             revenue: revenue,
             currency: currency,
             transactionId: transactionId,
+            originalTransactionId: originalTransactionId,
             timestamp: timestamp,
             isHistorical: isHistorical
         )

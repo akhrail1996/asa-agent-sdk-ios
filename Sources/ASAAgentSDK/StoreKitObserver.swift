@@ -44,6 +44,7 @@ public final class StoreKitObserver {
                     currency: currency,
                     type: type,
                     transactionId: String(txn.id),
+                    originalTransactionId: String(txn.originalID),
                     timestamp: txn.purchaseDate,
                     isHistorical: true
                 )
@@ -72,6 +73,7 @@ public final class StoreKitObserver {
             currency: currency,
             type: type,
             transactionId: String(transaction.id),
+            originalTransactionId: String(transaction.originalID),
             timestamp: transaction.purchaseDate
         )
 
