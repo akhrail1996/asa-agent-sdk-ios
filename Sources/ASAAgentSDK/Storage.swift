@@ -30,6 +30,49 @@ final class Storage {
         set { UserDefaults.standard.set(newValue, forKey: SDKConstants.attributionSentKey) }
     }
 
+    // MARK: - Event Queue
+
+    private let eventQueueLock = DispatchQueue(label: "com.asaagent.sdk.eventQueue")
+
+    /// Save a failed revenue event to the pending queue.
+    func enqueueEvent(_ event: RevenueEvent) {
+        eventQueueLock.async { [self] in
+            var events = loadPendingEventsUnsafe()
+            events.append(event)
+            if events.count > SDKConstants.maxPendingEvents {
+                events = Array(events.suffix(SDKConstants.maxPendingEvents))
+            }
+            savePendingEventsUnsafe(events)
+        }
+    }
+
+    /// Load and clear all pending events atomically.
+    func dequeuePendingEvents() -> [RevenueEvent] {
+        eventQueueLock.sync {
+            let events = loadPendingEventsUnsafe()
+            if !events.isEmpty {
+                UserDefaults.standard.removeObject(forKey: SDKConstants.pendingEventsKey)
+            }
+            return events
+        }
+    }
+
+    private func loadPendingEventsUnsafe() -> [RevenueEvent] {
+        guard let data = UserDefaults.standard.data(forKey: SDKConstants.pendingEventsKey) else {
+            return []
+        }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return (try? decoder.decode([RevenueEvent].self, from: data)) ?? []
+    }
+
+    private func savePendingEventsUnsafe(_ events: [RevenueEvent]) {
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        guard let data = try? encoder.encode(events) else { return }
+        UserDefaults.standard.set(data, forKey: SDKConstants.pendingEventsKey)
+    }
+
     // MARK: - Keychain Helpers
 
     private static func readKeychain(key: String) -> String? {

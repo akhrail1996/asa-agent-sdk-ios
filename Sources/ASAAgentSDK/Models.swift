@@ -19,7 +19,7 @@ public enum RevenueEventType: String, Sendable {
 // MARK: - Environment Detection
 
 /// The runtime environment of the app.
-enum AppEnvironment: String, Encodable {
+enum AppEnvironment: String, Codable {
     case debug
     case testflight
     case production
@@ -56,7 +56,7 @@ struct AttributionPayload: Encodable {
 }
 
 /// Revenue event payload sent to the backend.
-struct RevenueEvent: Encodable {
+struct RevenueEvent: Codable {
     let deviceId: String
     let eventType: String
     let productId: String
@@ -64,9 +64,9 @@ struct RevenueEvent: Encodable {
     let currency: String
     let transactionId: String?
     let originalTransactionId: String?
-    let sdkVersion: String = SDKConstants.version
+    let sdkVersion: String
     let timestamp: String
-    let environment: AppEnvironment = AppEnvironment.current
+    let environment: AppEnvironment
     let isHistorical: Bool
 
     init(
@@ -87,16 +87,20 @@ struct RevenueEvent: Encodable {
         self.currency = currency
         self.transactionId = transactionId
         self.originalTransactionId = originalTransactionId
+        self.sdkVersion = SDKConstants.version
         self.timestamp = ISO8601DateFormatter().string(from: timestamp)
+        self.environment = AppEnvironment.current
         self.isHistorical = isHistorical
     }
 }
 
 /// SDK constants.
 enum SDKConstants {
-    static let version = "0.6.0"
+    static let version = "0.8.0"
     static let keychainService = "com.asaagent.sdk"
     static let keychainDeviceIdKey = "device_id"
     static let attributionSentKey = "com.asaagent.sdk.attribution_sent"
     static let historicalSyncKey = "com.asaagent.sdk.historical_sync_v1"
+    static let pendingEventsKey = "com.asaagent.sdk.pending_events"
+    static let maxPendingEvents = 100
 }

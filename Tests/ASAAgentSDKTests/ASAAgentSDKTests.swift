@@ -101,7 +101,7 @@ final class ASAAgentSDKTests: XCTestCase {
             bundleId: "com.test.app",
             appVersion: "1.0.0",
             osVersion: "17.4",
-            sdkVersion: "0.6.0",
+            sdkVersion: SDKConstants.version,
             environment: .debug,
             installDate: "2026-03-20T10:00:00Z"
         )
@@ -115,7 +115,7 @@ final class ASAAgentSDKTests: XCTestCase {
         XCTAssertEqual(json["attribution_token"] as? String, "fake-token-base64")
         XCTAssertEqual(json["bundle_id"] as? String, "com.test.app")
         XCTAssertEqual(json["app_version"] as? String, "1.0.0")
-        XCTAssertEqual(json["sdk_version"] as? String, "0.6.0")
+        XCTAssertEqual(json["sdk_version"] as? String, SDKConstants.version)
         XCTAssertEqual(json["environment"] as? String, "debug")
         XCTAssertEqual(json["install_date"] as? String, "2026-03-20T10:00:00Z")
     }
@@ -127,7 +127,7 @@ final class ASAAgentSDKTests: XCTestCase {
             bundleId: "com.test.app",
             appVersion: "1.0.0",
             osVersion: "17.4",
-            sdkVersion: "0.6.0",
+            sdkVersion: SDKConstants.version,
             environment: .production,
             installDate: nil
         )
@@ -156,7 +156,7 @@ final class ASAAgentSDKTests: XCTestCase {
     // MARK: - SDK Constants
 
     func testSDKVersion() {
-        XCTAssertEqual(SDKConstants.version, "0.6.0")
+        XCTAssertEqual(SDKConstants.version, "0.8.0")
     }
 
     func testRevenueEventWithHistoricalTimestamp() throws {
@@ -212,6 +212,72 @@ final class ASAAgentSDKTests: XCTestCase {
         logger.log("This should not crash either")
     }
 
+    // MARK: - Codable Round-Trip
+
+    func testRevenueEventRoundTripEncoding() throws {
+        let event = RevenueEvent(
+            deviceId: "test-device",
+            eventType: "purchase",
+            productId: "com.test.product",
+            revenue: 9.99,
+            currency: "USD",
+            transactionId: "txn_123",
+            originalTransactionId: "txn_orig_100"
+        )
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let data = try encoder.encode(event)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let decoded = try decoder.decode(RevenueEvent.self, from: data)
+
+        XCTAssertEqual(decoded.deviceId, event.deviceId)
+        XCTAssertEqual(decoded.eventType, event.eventType)
+        XCTAssertEqual(decoded.productId, event.productId)
+        XCTAssertEqual(decoded.revenue, event.revenue)
+        XCTAssertEqual(decoded.currency, event.currency)
+        XCTAssertEqual(decoded.transactionId, event.transactionId)
+        XCTAssertEqual(decoded.originalTransactionId, event.originalTransactionId)
+        XCTAssertEqual(decoded.sdkVersion, event.sdkVersion)
+        XCTAssertEqual(decoded.timestamp, event.timestamp)
+        XCTAssertEqual(decoded.isHistorical, event.isHistorical)
+    }
+
+    func testRevenueEventDecodesWithNilOptionals() throws {
+        let event = RevenueEvent(
+            deviceId: "test-device",
+            eventType: "trial",
+            productId: "com.test.trial",
+            revenue: 0,
+            currency: "USD",
+            transactionId: nil
+        )
+
+        let encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+        let data = try encoder.encode(event)
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let decoded = try decoder.decode(RevenueEvent.self, from: data)
+
+        XCTAssertNil(decoded.transactionId)
+        XCTAssertNil(decoded.originalTransactionId)
+        XCTAssertEqual(decoded.revenue, 0)
+    }
+
+    func testAppEnvironmentRoundTrip() throws {
+        let encoder = JSONEncoder()
+        let decoder = JSONDecoder()
+        for env in [AppEnvironment.debug, .testflight, .production] {
+            let data = try encoder.encode(env)
+            let decoded = try decoder.decode(AppEnvironment.self, from: data)
+            XCTAssertEqual(decoded, env)
+        }
+    }
+
     // MARK: - Storage
 
     func testStorageAttributionSentFlag() {
@@ -226,5 +292,65 @@ final class ASAAgentSDKTests: XCTestCase {
 
         // Restore
         storage.attributionSent = originalValue
+    }
+
+    // MARK: - Event Queue
+
+    func testStorageEnqueueAndDequeueEvents() {
+        let storage = Storage()
+        _ = storage.dequeuePendingEvents()
+
+        let event1 = RevenueEvent(
+            deviceId: "dev-1", eventType: "purchase", productId: "prod_a",
+            revenue: 1.99, currency: "USD", transactionId: "t1"
+        )
+        let event2 = RevenueEvent(
+            deviceId: "dev-1", eventType: "subscription", productId: "prod_b",
+            revenue: 9.99, currency: "EUR", transactionId: "t2"
+        )
+
+        storage.enqueueEvent(event1)
+        storage.enqueueEvent(event2)
+
+        let exp = expectation(description: "Queue writes complete")
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) { exp.fulfill() }
+        wait(for: [exp], timeout: 2)
+
+        let dequeued = storage.dequeuePendingEvents()
+        XCTAssertEqual(dequeued.count, 2)
+        XCTAssertEqual(dequeued[0].productId, "prod_a")
+        XCTAssertEqual(dequeued[1].productId, "prod_b")
+
+        let empty = storage.dequeuePendingEvents()
+        XCTAssertTrue(empty.isEmpty)
+    }
+
+    func testStorageEventQueueCap() {
+        let storage = Storage()
+        _ = storage.dequeuePendingEvents()
+
+        for i in 0..<105 {
+            let event = RevenueEvent(
+                deviceId: "dev", eventType: "purchase", productId: "prod_\(i)",
+                revenue: 1.0, currency: "USD", transactionId: "t_\(i)"
+            )
+            storage.enqueueEvent(event)
+        }
+
+        let exp = expectation(description: "Queue writes complete")
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { exp.fulfill() }
+        wait(for: [exp], timeout: 3)
+
+        let dequeued = storage.dequeuePendingEvents()
+        XCTAssertEqual(dequeued.count, 100)
+        XCTAssertEqual(dequeued[0].productId, "prod_5")
+        XCTAssertEqual(dequeued[99].productId, "prod_104")
+    }
+
+    func testStorageDequeueEmptyReturnsEmptyArray() {
+        let storage = Storage()
+        _ = storage.dequeuePendingEvents()
+        let result = storage.dequeuePendingEvents()
+        XCTAssertTrue(result.isEmpty)
     }
 }

@@ -89,6 +89,9 @@ public final class ASAAgent {
         // Fire-and-forget attribution collection
         instance.collectAttributionIfNeeded()
 
+        // Flush any revenue events that failed in previous sessions
+        instance.flushPendingEvents()
+
         return instance
     }
 
@@ -192,13 +195,37 @@ public final class ASAAgent {
             isHistorical: isHistorical
         )
 
-        network.sendEvent(event) { [logger] result in
+        sendEventWithRetry(event)
+    }
+
+    /// Send an event, retry once after 5 seconds on failure, then persist to queue.
+    private func sendEventWithRetry(_ event: RevenueEvent, isRetry: Bool = false) {
+        network.sendEvent(event) { [weak self] result in
+            guard let self = self else { return }
             switch result {
             case .success:
-                logger.log("Revenue event sent: \(type.rawValue) \(revenue) \(currency) [\(productId)]")
+                self.logger.log("Revenue event sent: \(event.eventType) \(event.revenue) \(event.currency) [\(event.productId)]")
             case .failure(let error):
-                logger.log("Failed to send revenue event: \(error.localizedDescription)")
+                if isRetry {
+                    self.logger.log("Revenue event retry failed: \(error.localizedDescription). Queuing for next session.")
+                    self.storage.enqueueEvent(event)
+                } else {
+                    self.logger.log("Revenue event failed: \(error.localizedDescription). Retrying in 5s...")
+                    DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 5) { [weak self] in
+                        self?.sendEventWithRetry(event, isRetry: true)
+                    }
+                }
             }
+        }
+    }
+
+    /// Retry sending any revenue events queued from previous sessions.
+    private func flushPendingEvents() {
+        let pendingEvents = storage.dequeuePendingEvents()
+        guard !pendingEvents.isEmpty else { return }
+        logger.log("Flushing \(pendingEvents.count) pending revenue event(s) from previous session.")
+        for event in pendingEvents {
+            sendEventWithRetry(event)
         }
     }
 }
