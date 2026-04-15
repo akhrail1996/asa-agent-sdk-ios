@@ -212,6 +212,12 @@ final class ASAAgentSDKTests: XCTestCase {
         logger.log("This should not crash either")
     }
 
+}
+
+// MARK: - Codable & Event Queue Tests
+
+final class ASAAgentRetryTests: XCTestCase {
+
     // MARK: - Codable Round-Trip
 
     func testRevenueEventRoundTripEncoding() throws {
@@ -329,10 +335,10 @@ final class ASAAgentSDKTests: XCTestCase {
         let storage = Storage()
         _ = storage.dequeuePendingEvents()
 
-        for i in 0..<105 {
+        for idx in 0..<105 {
             let event = RevenueEvent(
-                deviceId: "dev", eventType: "purchase", productId: "prod_\(i)",
-                revenue: 1.0, currency: "USD", transactionId: "t_\(i)"
+                deviceId: "dev", eventType: "purchase", productId: "prod_\(idx)",
+                revenue: 1.0, currency: "USD", transactionId: "t_\(idx)"
             )
             storage.enqueueEvent(event)
         }
